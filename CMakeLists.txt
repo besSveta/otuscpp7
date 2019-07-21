@@ -29,7 +29,7 @@ target_link_libraries(test_nickname
 	lib
 )
 	
-install(TARGETS allocator RUNTIME DESTINATION bin)
+install(TARGETS nickname RUNTIME DESTINATION bin)
 
 set(CPACK_GENERATOR DEB)
 
