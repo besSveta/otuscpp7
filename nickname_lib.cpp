@@ -136,12 +136,14 @@ bool RadixTree::insert(std::string word) {
 			}
 		}
 	}
-	std::string RadixTree::getParent(std::string value){
+	std::tuple<bool,std::string> RadixTree::getParent(std::string value){
 		auto it=members.find(value);
 		if (it != members.end()){
-			return it->second->parent->label;
+			if (it->second->parent!=nullptr)
+				return std::make_tuple(true,it->second->parent->label);
+			return std::make_tuple(true,"");
 		}
-		return "";
+		return std::make_tuple(false,"");
 	}
 
 	void RadixTree::printNickNames() {

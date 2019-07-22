@@ -12,6 +12,7 @@
 #include <vector>
 #include <memory>
 #include <sstream>
+#include <tuple>
 struct Node;
 class RadixTree {
 	std::map<std::string, std::shared_ptr<Node>> members;
@@ -28,5 +29,5 @@ public:
 	void printNickNames();
 
 	void printAsTree();
-    std::string getParent(std::string value);
+	std::tuple<bool,std::string> getParent(std::string value);
 	};
