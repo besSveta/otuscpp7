@@ -10,7 +10,8 @@ int main(int, char *[]) {
 	for (std::string line; std::getline(std::cin, line);) {
 		tr.insert(line);
 	}
-	tr.printNickNames();
-	tr.printAsTree();
+
+	tr.printNickNames(tr.GetParent(), "");
+	tr.printAsTree(tr.GetParent(), 0);
 }
 

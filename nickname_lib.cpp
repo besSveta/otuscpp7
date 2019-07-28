@@ -4,215 +4,262 @@
  *  Created on: 22 июл. 2019 г.
  *      Author: sveta
  */
+
 #include "nickname.h"
-struct Node  {
-	std::string label;
-	std::shared_ptr<Node> parent;
-	bool hasChildren;
-	bool isFake;
 
-	Node() {
-		label = "";
-		hasChildren = false;
-		parent = nullptr;
-		isFake = false;
-	}
-
-	Node(std::string word, bool fake = false) :
-			label(word) {
-		hasChildren = false;
-		parent = nullptr;
-		isFake = fake;
-
-	}
-	Node(const Node&nd) :
-			label(nd.label), parent(nd.parent), hasChildren(nd.hasChildren), isFake(
-					nd.isFake) {
-
-	}
-};
-
-std::string findSubstring(const std::string& first, const std::string& second) {
+std::string findSubstring(const std::string &first, const std::string& second,
+		size_t second_shift) {
 	std::stringstream s("");
-	for (std::size_t i = 0; i < std::min(first.length(), second.length());
-			i++) {
-		if (first[i] == second[i]) {
-			s << first[i];
+	size_t indx;
+	auto secondBound = second.length() - second_shift;
+	for (std::size_t i = 0; i < std::min(first.length(), secondBound); i++) {
+		indx = i + second_shift;
+		if (first[i] == second[indx]) {
+			s << second[indx];
 		} else
 			return s.str();
 	}
 	return s.str();
 }
 
-	// после поиска подстрок в родителях вызываем функцию для задания родителя.
-	void RadixTree::SetParentInner(std::shared_ptr<Node> first,
-			std::shared_ptr<Node> second, std::string substr) {
-
-		if (substr.empty()) {
-			return;
-		}
-
-		if (substr == first->label) {
-			// смогли найти родителя добавляемой строки.
-			// если  нашли подстроку в имеющихся
-			second->parent = first;
-			first->hasChildren = true;
-		} else {
-			// родителя не нашли, но есть общая часть,
-			// создаем для нее узел и делаем родителем добавляемой и наименьшей найденной строки.
-			second->parent = std::make_shared<Node>(substr, true); // указать, что этот элемент не из потока данных.
-			first->parent = second->parent;
-			members.insert(
-					std::pair<std::string, std::shared_ptr<Node>>(substr,
-							second->parent));
-		}
+std::string GetSubstring(const std::string& word, size_t shift) {
+	std::stringstream s("");
+	for (std::size_t i = shift; i < word.length(); i++) {
+		s << word[i];
 	}
+	return s.str();
+}
 
-	void RadixTree::SetParent(std::shared_ptr<Node> first, std::shared_ptr<Node> second) {
-		// содержит ли добавляемая строка строку из уже имеющихся.
-		auto substr = findSubstring(second->label, first->label);
-		auto len = substr.length();
-		auto prevSubstr=substr;
-		auto prevlen = len;;
-		std::shared_ptr<Node> firstPtr(first->parent);
-		std::shared_ptr<Node> currentPtr(first);
-		//если есть строка,которая содержит добавляемую, посмотрим родителей.
-		while (len >= 1 && firstPtr != nullptr) {
-			substr = findSubstring(second->label, firstPtr->label);
-			len = substr.length();
-			// стоит продолжить смотреть родителей, если длина пересечения строк не поменялась.
-			if (len == prevlen) {
-				currentPtr = firstPtr;
-				firstPtr = firstPtr->parent;
-			} else{
-				substr=prevSubstr;
+// после поиска подстрок в родителях вызываем функцию для задания родителя.
+Node RadixTree::SetNewParent(Node *firstChild, const std::string &word,
+		const std::string &parentLabel = "") {
+	auto isEnd = word.empty();
+	auto t = CreateNode(parentLabel, isEnd);
+	t.childs[0] = std::unique_ptr<Node>(firstChild);
+	t.childsCount = 1;
+	if (!isEnd) {
+		auto child = CreateNode(word, true);
+		t.childs[1] = std::make_unique<Node>(std::move(child));
+		t.childsCount++;
+	}
+	return t;
+}
+
+Node* RadixTree::GetParent() {
+	if (root != nullptr) {
+		return root.get();
+	}
+	return nullptr;
+}
+
+void RadixTree::SetParentInner(Node &parent, const std::string &word) {
+	if (word.empty())
+		return;
+	auto child = CreateNode(word, true);
+	std::string substr;
+	size_t len;
+	Node* temp;
+	// если есть потомки содержащие заданное слово, надо это слово вырезать.
+	// также поменять им родителя.
+	for (size_t i = 0; i < parent.childsCount; i++) {
+		temp = parent.childs[i].get();
+		substr = findSubstring(temp->label, word, 0);
+		len = substr.length();
+		if (len > 0) {
+			child.childs[child.childsCount++] = std::unique_ptr<Node>(
+					parent.childs[i].release());
+			for (size_t j = i + 1; j < parent.childsCount; j++) {
+				parent.childs[i].reset(parent.childs[i + 1].release());
+			}
+			parent.childsCount--;
+			temp->label = GetSubstring(temp->label, len);
+		}
+
+	}
+	parent.childs[parent.childsCount++] = std::make_unique<Node>(
+			std::move(child));
+}
+
+// если надо перезаписать корень. вернет true
+// новый корень к третьем параметре
+bool RadixTree::SetParent(Node* parent, const std::string &word,
+		Node& newNode) {
+	auto substr = findSubstring(parent->label, word, 0);
+	auto len = substr.length();
+	if (!parent->label.empty() && len == 0) {
+		newNode = SetNewParent(parent, word);
+		return true;
+	} else {
+		size_t currentShift;
+		Node* currentNode(parent);
+		Node* prevNode(currentNode);
+		Node* temp;
+		currentShift = len;
+		auto prevLen = len;
+		int childIndx = -1;
+		/// поиск совпадений в детях.
+		for (size_t i = 0; i < currentNode->childsCount; i++) {
+			if (currentNode->childs[i] == nullptr) {
 				break;
 			}
-		}
-		SetParentInner(currentPtr, second, substr);
+			temp = currentNode->childs[i].get();
+			substr = findSubstring(temp->label, word, currentShift);
+			len = substr.length();
+			if (len > 0 && len >= prevLen) {
+				prevLen = len;
+				prevNode = currentNode;
+				// далее надо посмотеть детей найденного узла, на наличие пересечений.
+				currentNode = temp;
+				childIndx = i;
+				currentShift += len;
+				break;
+			}
 
+		}
+
+		if (substr == currentNode->label)
+			/// родитель существует уже в дереве, надо добваить в список детей
+			SetParentInner(*currentNode, GetSubstring(word, currentShift));
+		else {
+			currentNode->label = GetSubstring(currentNode->label, len);
+			//надо записать нового родителя добавляемого и узла пересекающегося с добавляемым, в список детей
+			// вышестоящего узла, перезаписав.
+			newNode = SetNewParent(currentNode,
+					GetSubstring(word, currentShift), substr);
+			if (childIndx >= 0) {
+				prevNode->childs[childIndx].release();
+				prevNode->childs[childIndx] = std::make_unique<Node>(
+						std::move(newNode));
+				return false;
+			} else {
+				return true;
+			}
+
+		}
+		return false;
 	}
+
+}
+
+Node CreateNode(const std::string &word, bool isEnd) {
+	auto temp = Node();
+	temp.label = word;
+	temp.is_end = isEnd;
+	return temp;
+}
 
 bool RadixTree::insert(std::string word) {
 
-		auto it = members.lower_bound(word);
-
-		if (it != members.end()) {
-			if (it->first == word)
-				return false;
-			auto newMember = std::make_shared<Node>(word);
-			// если есть строки, которые лексически меньше добавляемой.
-			if (it != members.begin()) {
-				auto prev = std::prev(it);
-				// содержит ли добавляемая строка строку из уже имеющихся.
-				SetParent(prev->second, newMember);
-			} else {
-				// нет строк, которые меньше добавляемой.
-				newMember->parent = nullptr;
-			}
-			// рассматриваем строку, большую чем добавляемая.
-			// добавляемая содержится в одной из имеющихся.
-			SetParent(newMember, it->second);
-			members[word] = newMember;
-		} else {
-			// нет строк, которые больше добавляемой.
-			auto newMember = std::make_shared<Node>(word);
-			newMember->hasChildren = false;
-			if (members.size() > 0) {
-				SetParent(members.begin()->second, newMember);
-			}
-			members[word] = newMember;
-		}
+	if (word.empty()) {
+		return false;
+	}
+	if (exitingLabels.find(word) != exitingLabels.end()) {
+		return false;
+	}
+	if (root == nullptr) {
+		auto t = CreateNode(word, true);
+		root = std::make_unique<Node>(std::move(t));
+		exitingLabels.insert(word);
 		return true;
-
-	}
-	void RadixTree::printParents() {
-		for (auto m : members) {
-			if (m.second->parent != nullptr)
-				std::cout << m.first << " parent: " << m.second->parent->label
-						<< std::endl;
-			else {
-				std::cout << m.first << std::endl;
-			}
-		}
-	}
-	std::tuple<bool,std::string> RadixTree::getParent(std::string value){
-		auto it=members.find(value);
-		if (it != members.end()){
-			if (it->second->parent!=nullptr)
-				return std::make_tuple(true,it->second->parent->label);
-			return std::make_tuple(true,"");
-		}
-		return std::make_tuple(false,"");
 	}
 
-	void RadixTree::printNickNames() {
-		for (auto m : members) {
-			if (!m.second->isFake) {
-				if (!m.second->hasChildren) {
-					if (m.second->parent != nullptr) {
+	Node temp;
+	Node* rootNode = root.get();
+	if (SetParent(rootNode, word, temp)) {
+		root.release();
+		root = std::make_unique<Node>(std::move(temp));
 
-						auto len = m.second->parent->label.length();
-						if (m.second->label.length() > len) {
-							std::cout << m.second->label << " "
-									<< m.second->parent->label
-									<< m.second->label[len] << std::endl;
-						}
-					} else if (!m.second->label.empty()) {
-						std::cout << m.second->label << " "
-								<< m.second->label[0] << std::endl;
-					}
-				} else {
-					std::cout << m.second->label << " " << m.second->label
-							<< std::endl;
-				}
-			}
-		}
 	}
+	exitingLabels.insert(word);
+	return true;
 
-	void RadixTree::printAsTree() {
-		   std::shared_ptr<Node> currentPtr;
-		   std::unordered_set<std::string> used;
-		   std::stringstream ss;
-		   std::stringstream ss2;
-		   std::string tempstr;
-			for (auto m : members) {
-				ss.str("");
-				currentPtr=m.second;
-				while(currentPtr->parent != nullptr){
-					auto len=currentPtr->parent->label.length();
-					 ss2.str("");
-					for (std::size_t i =0; i<currentPtr->label.length(); i++){
-						if (i<len){
-							ss<<" ";
-						}
-						else
-							{
+}
 
-							  ss2<<currentPtr->label[i];
-							}
-					}
-					tempstr=ss2.str();
-					if(used.find(tempstr)==used.end())
-					{
-						ss<<tempstr;
-						if (!currentPtr->isFake)
-							ss<<"$";
-					}
-
-					used.insert(tempstr);
-					currentPtr=currentPtr->parent;
-				}
-				if (used.find(currentPtr->label)==used.end()){
-					ss<<currentPtr->label;
-					if (!currentPtr->isFake)
-						ss<<"$";
-				}
-				std::cout<<ss.str()<<std::endl;
-				used.insert(currentPtr->label);
+void RadixTree::printNickNames(Node *parent, std::string prevstr) {
+	if (parent == nullptr) {
+		return;
+	}
+	Node * temp;
+	if (parent == root.get() && !parent->label.empty()) {
+		prevstr = parent->label;
+	}
+	for (size_t i = 0; i < parent->childsCount; i++) {
+		if (parent->childs[i] == nullptr)
+			return;
+		temp = parent->childs[i].get();
+		if (temp->is_end && !temp->label.empty()) {
+			std::cout << prevstr << temp->label << " " << prevstr;
+			if (temp->childs[0] == nullptr) {
+				std::cout << temp->label[0];
+			} else {
+				std::cout << temp->label;
 			}
 
+			std::cout << std::endl;
+		}
+		printNickNames(temp, prevstr + temp->label);
+	}
+}
+
+void RadixTree::printAsTree(Node *parent, int level) {
+	if (parent == nullptr) {
+		return;
+	}
+	Node * temp;
+	int shift = level;
+	if (!parent->label.empty()) {
+		shift = parent->label.length() + level;
+		if (level == 0) {
+			std::cout << parent->label << std::endl;
 		}
 
+	}
 
+	for (size_t i = 0; i < parent->childsCount; i++) {
+		if (parent->childs[i] == nullptr)
+			return;
+		temp = parent->childs[i].get();
+		if (!temp->label.empty()) {
+			std::cout << std::setw(shift) << " ";
+			std::cout << temp->label << std::endl;
+		}
+		printAsTree(temp, shift + 1);
+	}
+}
+
+std::tuple<bool, std::string> RadixTree::getParent(std::string value) {
+	if (root == nullptr) {
+		return std::make_tuple(false, "");
+	}
+	if (exitingLabels.find(value) == exitingLabels.end()) {
+		return std::make_tuple(false, "");
+	}
+	Node * currentNode = root.get();
+	auto substr = findSubstring(currentNode->label, value, 0);
+	if (substr == value) {
+		return std::make_tuple(true, currentNode->label);
+	}
+
+	Node * temp;
+	size_t len;
+	size_t currentShift = 0;
+
+	for (size_t i = 0; i < currentNode->childsCount; i++) {
+		if (currentNode->childs[i] == nullptr) {
+			break;
+		}
+		temp = currentNode->childs[i].get();
+		substr = findSubstring(temp->label, value, currentShift);
+		len = substr.length();
+		if (len > 0) {
+			currentShift += len;
+			if (currentShift == value.length()) {
+				return std::make_tuple(true, currentNode->label);
+			}
+			currentNode = temp;
+		}
+
+	}
+	return std::make_tuple(false, "");
+}
 
