@@ -18,23 +18,22 @@ struct Node {
 	std::string label;
 	bool is_end;
 	std::array<std::unique_ptr<Node>, 256> childs;
-	size_t childsCount = 0;
 
 };
 Node CreateNode(const std::string &word, bool isEnd);
 
 class RadixTree {
 	std::unique_ptr<Node> root;
-	std::unordered_set<std::string> exitingLabels;
 	Node SetNewParent(Node* firstChild, const std::string &word,
-			const std::string &parentLabel);
+		const std::string &parentLabel);
 	void SetParentInner(Node &parent, const std::string &word);
 	bool SetParent(Node* parent, const std::string &word, Node& newNode);
 	void printParents();
-
+	std::tuple<Node*, Node*, std::string> FindNode(std::string word);
+	bool CheckIfExists(std::string word);
 public:
 	RadixTree() :
-			root(nullptr) {
+		root(nullptr) {
 
 	}
 	bool insert(std::string word);
