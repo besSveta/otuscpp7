@@ -4,7 +4,7 @@
  *  Created on: 22 июл. 2019 г.
  *      Author: sveta
  */
-#include "pch.h"
+
 #include "nickname.h"
 
 std::string findSubstring(const std::string &first, const std::string& second,
