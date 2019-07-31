@@ -4,6 +4,7 @@
  *  Created on: 22 июл. 2019 г.
  *      Author: sveta
  */
+#include "pch.h"
 #include "nickname.h"
 
 std::string findSubstring(const std::string &first, const std::string& second,
@@ -258,17 +259,30 @@ bool RadixTree::CheckIfExists(std::string word) {
 	auto substr = std::get<2>(found);
 	if (substr == word)
 		return true;
+
 	return false;
 
 }
 std::tuple<bool, std::string> RadixTree::getParent(std::string word) {
 	std::tuple<Node*, Node*, std::string> found = FindNode(word);
 	Node* prevNode = std::get<0>(found);
-	if (prevNode == nullptr)
-		return std::make_tuple(true, "");
 	Node* currentNode = std::get<1>(found);
 	auto substr = std::get<2>(found);
+	if (substr.empty())
+		return std::make_tuple(false, "");
+	if (prevNode == nullptr)
+	{
+		if (substr == word)
+			return  std::make_tuple(true, currentNode->label);
+		else
+			return std::make_tuple(false, "");
+	}
+
 	if (substr == word)
+		return  std::make_tuple(true, currentNode->label);
+	auto childIndx = (size_t)word[substr.length()];
+	prevNode = currentNode->childs[childIndx].get();
+	if (substr + prevNode->label == word)
 		return  std::make_tuple(true, currentNode->label);
 	return std::make_tuple(false, "");
 }
