@@ -39,7 +39,8 @@ public:
 	bool insert(std::string word);
 	void printNickNames(Node *parent, std::string ss);
 
-	void printAsTree(Node *parent, int level);
+	void printAsTree(Node *parent, int level, int childNum);
 	Node* GetParent();
 	std::tuple<bool, std::string> getParent(std::string value);
 };
+
