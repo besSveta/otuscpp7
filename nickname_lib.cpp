@@ -8,7 +8,7 @@
 #include "nickname.h"
 
 std::string findSubstring(const std::string &first, const std::string& second,
-	size_t second_shift) {
+		size_t second_shift) {
 	if (first.empty() || second.empty())
 		return "";
 	std::stringstream s("");
@@ -18,8 +18,7 @@ std::string findSubstring(const std::string &first, const std::string& second,
 		indx = i + second_shift;
 		if (first[i] == second[indx]) {
 			s << second[indx];
-		}
-		else
+		} else
 			return s.str();
 	}
 	return s.str();
@@ -35,14 +34,14 @@ std::string GetSubstring(const std::string& word, size_t shift) {
 
 // после поиска подстрок в родителях вызываем функцию для задания родителя.
 Node RadixTree::SetNewParent(Node *firstChild, const std::string &word,
-	const std::string &parentLabel = "") {
+		const std::string &parentLabel = "") {
 	auto isEnd = word.empty();
 	auto t = CreateNode(parentLabel, isEnd);
-	size_t indx = ((size_t)(firstChild->label[0]))%256;
+	size_t indx = ((size_t) (firstChild->label[0])) % 256;
 	t.childs[indx] = std::unique_ptr<Node>(firstChild);
 	if (!isEnd) {
 		auto child = CreateNode(word, true);
-		indx = ((size_t)word[0])%256;
+		indx = ((size_t) word[0]) % 256;
 		t.childs[indx] = std::make_unique<Node>(std::move(child));
 	}
 	return t;
@@ -64,15 +63,15 @@ void RadixTree::SetParentInner(Node &parent, const std::string &word) {
 	Node* temp;
 	// если есть потомки содержащие заданное слово, надо это слово вырезать.
 	// также поменять  родителя.
-	size_t indx = ((size_t)word[0])%256;
+	size_t indx = ((size_t) word[0]) % 256;
 	if (parent.childs[indx] != nullptr) {
 		temp = parent.childs[indx].get();
 		substr = findSubstring(temp->label, word, 0);
 		len = substr.length();
 		if (len > 0) {
 			temp->label = GetSubstring(temp->label, len);
-			child.childs[(size_t)(temp->label[0])] = std::unique_ptr<Node>(
-				parent.childs[indx].release());
+			child.childs[(size_t) (temp->label[0])] = std::unique_ptr<Node>(
+					parent.childs[indx].release());
 		}
 	}
 	parent.childs[indx] = std::make_unique<Node>(std::move(child));
@@ -80,8 +79,7 @@ void RadixTree::SetParentInner(Node &parent, const std::string &word) {
 
 std::tuple<Node*, Node*, std::string> RadixTree::FindNode(std::string word) {
 	Node* temp = root.get();
-	if (word.empty())
-	{
+	if (word.empty()) {
 		if (temp->label.empty())
 			return std::make_tuple(temp, nullptr, "");
 		else
@@ -100,7 +98,7 @@ std::tuple<Node*, Node*, std::string> RadixTree::FindNode(std::string word) {
 	Node * prevNode(nullptr);
 	currentShift = len;
 	/// поиск совпадений в детях.
-	size_t i = ((size_t)word[len])%256;
+	size_t i = ((size_t) word[len]) % 256;
 	while (currentNode->childs[i] != nullptr) {
 		prevNode = currentNode;
 		currentNode = currentNode->childs[i].get();
@@ -116,8 +114,7 @@ std::tuple<Node*, Node*, std::string> RadixTree::FindNode(std::string word) {
 		currentShift += len;
 		if (currentShift < word.length()) {
 			i = word[currentShift];
-		}
-		else {
+		} else {
 			return std::make_tuple(prevNode, currentNode, substr);
 		}
 
@@ -131,7 +128,7 @@ std::tuple<Node*, Node*, std::string> RadixTree::FindNode(std::string word) {
 // если надо перезаписать корень. вернет true
 // новый корень к третьем параметре
 bool RadixTree::SetParent(Node* parent, const std::string &word,
-	Node& newNode) {
+		Node& newNode) {
 	std::tuple<Node*, Node*, std::string> found = FindNode(word);
 	Node* prevNode = std::get<0>(found);
 	Node* currentNode = std::get<1>(found);
@@ -143,25 +140,25 @@ bool RadixTree::SetParent(Node* parent, const std::string &word,
 	if (!currentNode->label.empty() && len == 0) {
 		newNode = SetNewParent(parent, word);
 		return true;
-	}
-	else {
+	} else {
 		// substr - строка перечечения
 		if (substr == currentNode->label)
 			/// родитель существует уже в дереве, надо добваить в список детей
 			SetParentInner(*currentNode, GetSubstring(word, len));
 		else {
-			currentNode->label = GetSubstring(currentNode->label, substr.length());
+			currentNode->label = GetSubstring(currentNode->label,
+					substr.length());
 			//надо записать нового родителя добавляемого и узла пересекающегося с добавляемым, в список детей
 			// вышестоящего узла, перезаписав.
-			newNode = SetNewParent(currentNode, GetSubstring(word, len), substr);
-			auto childIndx = ((size_t)substr[0])%256;
+			newNode = SetNewParent(currentNode, GetSubstring(word, len),
+					substr);
+			auto childIndx = ((size_t) substr[0]) % 256;
 			if (childIndx >= 0 && prevNode != nullptr) {
 				prevNode->childs[childIndx].release();
 				prevNode->childs[childIndx] = std::make_unique<Node>(
-					std::move(newNode));
+						std::move(newNode));
 				return false;
-			}
-			else {
+			} else {
 				return true;
 			}
 
@@ -217,8 +214,7 @@ void RadixTree::printNickNames(Node *parent, std::string prevstr) {
 			std::cout << prevstr << temp->label << " " << prevstr;
 			if (temp->childs[0] == nullptr) {
 				std::cout << temp->label[0];
-			}
-			else {
+			} else {
 				std::cout << temp->label;
 			}
 
@@ -228,29 +224,28 @@ void RadixTree::printNickNames(Node *parent, std::string prevstr) {
 	}
 }
 
-void RadixTree::printAsTree(Node *parent, int level) {
-	if (parent == nullptr) {
+void RadixTree::printAsTree(Node *parent, int shift, int childNum) {
+	if (parent == nullptr)
 		return;
-	}
-	Node * temp;
-	int shift = level;
-	if (!parent->label.empty()) {
-		shift = parent->label.length() + level;
-		if (level == 0) {
-			std::cout << parent->label << std::endl;
-		}
 
-	}
+if (childNum==0){
+	shift = parent->label.length()+shift;
+}
+	if (childNum >= 0) {
+		auto i = childNum;
+		if (parent->childs[i] != nullptr) {
+			Node * temp;
+			temp = parent->childs[i].get();
+			if (!temp->label.empty()) {
+				std::cout << std::setw(shift) << " ";
+				std::cout << temp->label << "\n";
+				printAsTree(temp, shift+1, 0);
 
-	for (size_t i = 0; i < parent->childs.size(); i++) {
-		if (parent->childs[i] == nullptr)
-			continue;
-		temp = parent->childs[i].get();
-		if (!temp->label.empty()) {
-			std::cout << std::setw(shift) << " ";
-			std::cout << temp->label << std::endl;
+			}
+
 		}
-		printAsTree(temp, shift + 1);
+		if (i < 255 )
+			printAsTree(parent, shift , childNum + 1);
 	}
 }
 
@@ -270,20 +265,19 @@ std::tuple<bool, std::string> RadixTree::getParent(std::string word) {
 	auto substr = std::get<2>(found);
 	if (substr.empty())
 		return std::make_tuple(false, "");
-	if (prevNode == nullptr)
-	{
+	if (prevNode == nullptr) {
 		if (substr == word)
-			return  std::make_tuple(true, currentNode->label);
+			return std::make_tuple(true, currentNode->label);
 		else
 			return std::make_tuple(false, "");
 	}
 
 	if (substr == word)
-		return  std::make_tuple(true, currentNode->label);
-	auto childIndx = ((size_t)word[substr.length()])%256;
+		return std::make_tuple(true, currentNode->label);
+	auto childIndx = ((size_t) word[substr.length()]) % 256;
 	prevNode = currentNode->childs[childIndx].get();
 	if (substr + prevNode->label == word)
-		return  std::make_tuple(true, currentNode->label);
+		return std::make_tuple(true, currentNode->label);
 	return std::make_tuple(false, "");
 }
 
