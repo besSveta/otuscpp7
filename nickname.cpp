@@ -10,6 +10,6 @@ int main(int, char *[]) {
 		tr.insert(line);
 	}	
 	tr.printNickNames(tr.GetParent(), "");
-	tr.printAsTree(tr.GetParent(), 0);
+	tr.printAsTree(tr.GetParent(), 0, 0);
 
 }
