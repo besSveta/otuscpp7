@@ -38,11 +38,11 @@ Node RadixTree::SetNewParent(Node *firstChild, const std::string &word,
 	const std::string &parentLabel = "") {
 	auto isEnd = word.empty();
 	auto t = CreateNode(parentLabel, isEnd);
-	size_t indx = (size_t)(firstChild->label[0]);
+	size_t indx = ((size_t)(firstChild->label[0]))%256;
 	t.childs[indx] = std::unique_ptr<Node>(firstChild);
 	if (!isEnd) {
 		auto child = CreateNode(word, true);
-		indx = (size_t)word[0];
+		indx = ((size_t)word[0])%256;
 		t.childs[indx] = std::make_unique<Node>(std::move(child));
 	}
 	return t;
@@ -64,7 +64,7 @@ void RadixTree::SetParentInner(Node &parent, const std::string &word) {
 	Node* temp;
 	// если есть потомки содержащие заданное слово, надо это слово вырезать.
 	// также поменять  родителя.
-	size_t indx = (size_t)word[0];
+	size_t indx = ((size_t)word[0])%256;
 	if (parent.childs[indx] != nullptr) {
 		temp = parent.childs[indx].get();
 		substr = findSubstring(temp->label, word, 0);
@@ -100,7 +100,7 @@ std::tuple<Node*, Node*, std::string> RadixTree::FindNode(std::string word) {
 	Node * prevNode(nullptr);
 	currentShift = len;
 	/// поиск совпадений в детях.
-	size_t i = (size_t)word[len];
+	size_t i = ((size_t)word[len])%256;
 	while (currentNode->childs[i] != nullptr) {
 		prevNode = currentNode;
 		currentNode = currentNode->childs[i].get();
@@ -154,7 +154,7 @@ bool RadixTree::SetParent(Node* parent, const std::string &word,
 			//надо записать нового родителя добавляемого и узла пересекающегося с добавляемым, в список детей
 			// вышестоящего узла, перезаписав.
 			newNode = SetNewParent(currentNode, GetSubstring(word, len), substr);
-			auto childIndx = (size_t)substr[0];
+			auto childIndx = ((size_t)substr[0])%256;
 			if (childIndx >= 0 && prevNode != nullptr) {
 				prevNode->childs[childIndx].release();
 				prevNode->childs[childIndx] = std::make_unique<Node>(
@@ -280,10 +280,11 @@ std::tuple<bool, std::string> RadixTree::getParent(std::string word) {
 
 	if (substr == word)
 		return  std::make_tuple(true, currentNode->label);
-	auto childIndx = (size_t)word[substr.length()];
+	auto childIndx = ((size_t)word[substr.length()])%256;
 	prevNode = currentNode->childs[childIndx].get();
 	if (substr + prevNode->label == word)
 		return  std::make_tuple(true, currentNode->label);
 	return std::make_tuple(false, "");
 }
+
 
